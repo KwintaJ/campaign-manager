@@ -37,6 +37,12 @@ public class CampaignService {
         return campaignRepository.findAll();
     }
 
+    public Campaign getCampaignById(Long id) {
+        // walidacja id
+        return campaignRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Nie istnieje kampania o ID=" + id));
+    }
+
     @Transactional
     public Campaign createCampaign(CampaignDTO dto) {
         // walidacja czy jakies keywords sa
@@ -78,5 +84,73 @@ public class CampaignService {
         campaign.setRadius(dto.getRadius());
 
         return campaignRepository.save(campaign);
+    }
+
+    @Transactional
+    public Campaign updateCampaign(Long id, CampaignDTO dto) {
+        // walidacja id
+        Campaign campaign = campaignRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Nie istnieje kampania o ID=" + id));
+
+        // walidacja czy jakies keywords sa
+        if (dto.getKeywordIds() == null || dto.getKeywordIds().isEmpty()) {
+            throw new IllegalArgumentException("Kampania musi mieć przypisane co najmniej jedno słowo kluczowe!");
+        }
+
+        // obsluga roznicy w budzetach
+        BigDecimal oldFund = campaign.getCampaignFund();
+        BigDecimal newFund = dto.getCampaignFund();
+        BigDecimal fundDifference = newFund.subtract(oldFund); // + zabieramy z portfela, - = zwracamy
+
+        EmeraldAccount account = accountRepository.findById(1L)
+                .orElseThrow(() -> new IllegalStateException("Nie znaleziono konta!"));
+
+        if (fundDifference.compareTo(BigDecimal.ZERO) > 0) {
+            // przy wiekszym budzecie sprawdzamy czy stac
+            if (account.getBalance().compareTo(fundDifference) < 0) {
+                throw new IllegalArgumentException("Niewystarczające środki na koncie!");
+            }
+            account.setBalance(account.getBalance().subtract(fundDifference));
+        } else if (fundDifference.compareTo(BigDecimal.ZERO) < 0) {
+            account.setBalance(account.getBalance().add(fundDifference.abs()));
+        }
+        accountRepository.save(account);
+
+        // walidacja miasta i pobranie z bazy
+        Town town = townRepository.findById(dto.getTownId())
+                .orElseThrow(() -> new IllegalArgumentException("Wybrane miasto nie istnieje!"));
+        
+        // walidacja i pobranie keywordow
+        Set<Keyword> keywords = new HashSet<>(keywordRepository.findAllById(dto.getKeywordIds()));
+        if (keywords.size() != dto.getKeywordIds().size()) {
+            throw new IllegalArgumentException("Niektóre z wybranych słów kluczowych nie istnieją!");
+        }
+
+        // aktualizacja na obiekcie i zapis do bazy
+        campaign.setName(dto.getName());
+        campaign.setBidAmount(dto.getBidAmount());
+        campaign.setCampaignFund(dto.getCampaignFund());
+        campaign.setStatus(dto.getStatus() != null ? dto.getStatus() : "OFF");
+        campaign.setRadius(dto.getRadius());
+        campaign.setTown(town);
+        campaign.setKeywords(keywords);
+
+        return campaignRepository.save(campaign);
+    }
+
+    @Transactional
+    public void deleteCampaign(Long id) {
+        // walidacja id
+        Campaign campaign = campaignRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Nie istnieje kampania o ID=" + id));
+
+        // zwrocenie budzetu przy usuwaniu
+        EmeraldAccount account = accountRepository.findById(1L).orElseThrow(() -> new IllegalStateException("Nie znaleziono konta!"));
+        
+        account.setBalance(account.getBalance().add(campaign.getCampaignFund()));
+        accountRepository.save(account);
+
+        // delete na bazie danych
+        campaignRepository.delete(campaign);
     }
 }

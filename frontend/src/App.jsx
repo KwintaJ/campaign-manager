@@ -13,6 +13,7 @@ function App() {
   const [modalMode, setModalMode] = useState('create');
   const [editingId, setEditingId] = useState(null);
   const [formErrors, setFormErrors] = useState({});
+  const [apiError, setApiError] = useState(null);
 
   // nowy formularz edycji
   const initialFormState = {
@@ -32,8 +33,11 @@ function App() {
   const fetchData = () => {
     // pobranie salda
     fetch('http://localhost:8080/api/account/balance')
-      .then((response) => {
-        if (!response.ok) throw new Error('Błąd pobierania salda');
+      .then(async (response) => {
+        if (!response.ok) {
+          const errText = await response.text();
+          throw new Error(errText || 'Błąd pobierania salda');
+        }
         return response.json();
       })
       .then((data) => setBalance(data.balance))
@@ -41,8 +45,11 @@ function App() {
 
     // pobranie listy kampanii
     fetch('http://localhost:8080/api/campaigns')
-      .then((response) => {
-        if (!response.ok) throw new Error('Błąd pobierania kampanii');
+      .then(async (response) => {
+        if (!response.ok) {
+          const errText = await response.text();
+          throw new Error(errText || 'Błąd pobierania kampanii');
+        }
         return response.json();
       })
       .then((data) => {
@@ -58,7 +65,6 @@ function App() {
   useEffect(() => {
     fetchData();
 
-    // pobranie slownikow przy starcie
     fetch('http://localhost:8080/api/towns')
       .then(res => res.json())
       .then(data => setTowns(data))
@@ -71,18 +77,22 @@ function App() {
   }, []);
 
   // akcje tabeli
+  // usuwanie kampanii
   const handleDelete = (id) => {
     if (!window.confirm("Na pewno usunąć?")) return;
 
     fetch('http://localhost:8080/api/campaigns/' + id, { method: 'DELETE' })
-      .then((response) => {
+      .then(async (response) => {
         if (response.ok) {
+          const msg = await response.text();
+          alert(msg);
           fetchData();
         } else {
-          alert("Błąd serwera przy usuwaniu.");
+          const errText = await response.text();
+          alert(errText || "Błąd serwera przy usuwaniu.");
         }
       })
-      .catch(err => console.error("Błąd połączenia", err));
+      .catch(err => alert("Błąd połączenia: " + err.message));
   };
 
   const openCreateModal = () => {
@@ -90,40 +100,51 @@ function App() {
     setEditingId(null);
     setFormData(initialFormState);
     setFormErrors({});
+    setApiError(null);
     setIsModalOpen(true);
   };
 
+  // edycja lub stworznie kampanii
   const openEditModal = (id) => {
     setModalMode('edit');
     setEditingId(id);
     setFormErrors({});
+    setApiError(null);
     
     fetch('http://localhost:8080/api/campaigns/' + id)
-      .then(res => res.json())
+      .then(async (res) => {
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(errText || "Nie udało się pobrać danych kampanii.");
+        }
+        return res.json();
+      })
       .then(data => {
         setFormData({
           name: data.name || '',
           townId: data.town ? data.town.id : '',
           radius: data.radius || 10,
-          status: data.status || 'ON',
+          status: data.status || 'OFF',
           bidAmount: data.bidAmount || '',
           campaignFund: data.campaignFund || '',
           selectedKeywords: data.keywords || []
         });
         setIsModalOpen(true);
       })
-      .catch(err => alert("Nie udało się pobrać danych kampanii: " + err));
+      .catch(err => alert(err.message));
   };
 
   const closeModal = () => {
     setIsModalOpen(false);
     setKeywordSearch('');
+    setApiError(null);
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     if (formErrors[name]) setFormErrors(prev => ({ ...prev, [name]: null }));
+    if (apiError) setApiError(null); // Czyszczenie błędu API przy edycji
   };
 
   const toggleStatus = () => {
@@ -138,6 +159,7 @@ function App() {
     setKeywordSearch('');
     setShowKeywordDropdown(false);
     if (formErrors.keywords) setFormErrors(prev => ({ ...prev, keywords: null }));
+    if (apiError) setApiError(null);
   };
 
   const handleRemoveKeyword = (id) => {
@@ -189,8 +211,11 @@ function App() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     })
-      .then(response => {
-        if (!response.ok) throw new Error("Błąd podczas zapisu");
+      .then(async response => {
+        if (!response.ok) {
+          const errText = await response.text();
+          throw new Error(errText || "Błąd podczas zapisu.");
+        }
         closeModal();
         fetchData();
       })

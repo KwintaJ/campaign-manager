@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 
 function App() {
+  const [reload, setReload] = useState(0);
+  
   const [balance, setBalance] = useState(null);
   const [error, setError] = useState(null);
 
@@ -31,7 +33,23 @@ function App() {
         console.error("Błąd kampanii:", err);
         setIsLoading(false);
       });
-  }, []);
+
+    setReload(0);
+  }, [reload]);
+
+  const handleDelete = (id) => {
+    if (!window.confirm("Na pewno usunąć?")) return;
+
+    fetch('http://localhost:8080/api/campaigns/' + id, { method: 'DELETE' })
+      .then((response) => {
+        if (response.ok) {
+          setReload(1);
+        } else {
+          alert("Błąd serwera przy usuwaniu.");
+        }
+      })
+      .catch(err => console.error("Błąd połączenia", err));
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800 font-sans">
@@ -132,7 +150,7 @@ function App() {
                     </td>
                     <td className="py-4 px-6 text-center">
                       <button className="text-blue-600 hover:text-blue-800 font-medium text-sm mr-3">Edytuj</button>
-                      <button className="text-red-600 hover:text-red-800 font-medium text-sm">Usuń</button>
+                      <button onClick={() => handleDelete(campaign.id)} className="text-red-600 hover:text-red-800 font-medium text-sm">Usuń</button>
                     </td>
                   </tr>
                 ))}

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 
 function App() {
+  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+
   const [balance, setBalance] = useState(null);
   const [error, setError] = useState(null);
   const [campaigns, setCampaigns] = useState([]);
@@ -32,7 +34,7 @@ function App() {
 
   const fetchData = () => {
     // pobranie salda
-    fetch('http://localhost:8080/api/account/balance')
+    fetch(`${API_BASE}/account/balance`)
       .then(async (response) => {
         if (!response.ok) {
           const errText = await response.text();
@@ -44,7 +46,7 @@ function App() {
       .catch((err) => setError(err.message));
 
     // pobranie listy kampanii
-    fetch('http://localhost:8080/api/campaigns')
+    fetch(`${API_BASE}/campaigns`)
       .then(async (response) => {
         if (!response.ok) {
           const errText = await response.text();
@@ -65,12 +67,12 @@ function App() {
   useEffect(() => {
     fetchData();
 
-    fetch('http://localhost:8080/api/towns')
+    fetch(`${API_BASE}/towns`)
       .then(res => res.json())
       .then(data => setTowns(data))
       .catch(err => console.error("Błąd pobierania miast", err));
 
-    fetch('http://localhost:8080/api/keywords')
+    fetch(`${API_BASE}/keywords`)
       .then(res => res.json())
       .then(data => setAllKeywords(data))
       .catch(err => console.error("Błąd pobierania słów kluczowych", err));
@@ -81,7 +83,7 @@ function App() {
   const handleDelete = (id) => {
     if (!window.confirm("Na pewno usunąć?")) return;
 
-    fetch('http://localhost:8080/api/campaigns/' + id, { method: 'DELETE' })
+    fetch(`${API_BASE}/campaigns/${id}`, { method: 'DELETE' })
       .then(async (response) => {
         if (response.ok) {
           const msg = await response.text();
@@ -111,7 +113,7 @@ function App() {
     setFormErrors({});
     setApiError(null);
     
-    fetch('http://localhost:8080/api/campaigns/' + id)
+    fetch(`${API_BASE}/campaigns/${id}`)
       .then(async (res) => {
         if (!res.ok) {
           const errText = await res.text();
@@ -202,8 +204,8 @@ function App() {
     };
 
     const url = modalMode === 'create' 
-      ? 'http://localhost:8080/api/campaigns' 
-      : 'http://localhost:8080/api/campaigns/' + editingId;
+      ? `${API_BASE}/campaigns` 
+      : `${API_BASE}/campaigns/${editingId}`;
     const method = modalMode === 'create' ? 'POST' : 'PUT';
 
     fetch(url, {

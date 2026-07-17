@@ -5,8 +5,8 @@ export default defineConfig({
   plugins: [react()],
   server: {
     allowedHosts: [
-      'http://localhost',
-      'https://campaign-manager-front.onrender.com'
+      'localhost',
+      'campaign-manager-front.onrender.com'
     ]
   }
 })

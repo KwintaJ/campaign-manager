@@ -6,10 +6,12 @@ import kwinta.campaigns.service.CampaignService;
 import java.math.BigDecimal;
 import java.util.Set;
 
+import org.springframework.core.annotation.Order;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
 @Component
+@Order(2)
 public class MockCampaignSeeding implements CommandLineRunner {
 
     private final CampaignService campaignService;

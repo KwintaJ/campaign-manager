@@ -10,10 +10,12 @@ import kwinta.campaigns.repository.TownRepository;
 import java.math.BigDecimal;
 import java.util.List;
 
+import org.springframework.core.annotation.Order;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
 @Component
+@Order(1)
 public class DataSeeding implements CommandLineRunner {
 
     private final TownRepository townRepository;

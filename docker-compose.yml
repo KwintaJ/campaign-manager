@@ -1,0 +1,20 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+
+  frontend:
+    build: ./frontend
+    environment:
+      - VITE_API_URL=http://localhost:8080/api
+    ports:
+      - "5173:5173"
+    stdin_open: true
+    tty: true
+
+networks:
+  default:
+    name: app-network
